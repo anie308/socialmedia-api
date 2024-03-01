@@ -15,49 +15,54 @@ const newPost = async (req, res) => {
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decodedToken.id;
     const user = await User.findById(userId);
+    console.log(content)
+    console.log(file)
 
-    if (!user) {
-      return res.status(404).json({
-        statusCode: 404,
-        status: false,
-        message: "User not found",
-      });
-    } else {
-      const id = user._id;
-      const post = new Post({
-        owner: id,
-        content,
-      });
-      if (file) {
-        const { secure_url: url, public_id } = await cloudinary.uploader.upload(
-          file.path
-        );
-        post.media = { url, public_id };
-      }
-      await post.save();
+    // if (!user) {
+    //   return res.status(404).json({
+    //     statusCode: 404,
+    //     status: false,
+    //     message: "User not found",
+    //   });
+    // } else {
+    //   const id = user._id;
+    //   const post = new Post({
+    //     owner: id,
+    //     content,
+    //   });
 
-      const senderName = `${user.firstname} ${user.lastname}`;
+    //   if (file) {
+    //     const { secure_url: url, public_id, error } = await cloudinary.uploader.upload(
+    //       file.path
+    //     );
+    //     post.media = { url, public_id };
+    //     console.log(error);
+    //   }
 
-      const friendList = await Friend.findOne({ user: id });
+    //   await post.save();
 
-      if (friendList && friendList.friends.length > 0) {
-        // Loop through the friends and send notifications
-        for (const friendId of friendList.friends) {
-          notification({
-            user: friendId,
-            type: "post",
-            content: `${senderName} added a post`,
-            sourceUser: id,
-            post: post._id,
-          });
-        }
-      }
+    //   const senderName = `${user.firstname} ${user.lastname}`;
 
-      res.status(201).json({
-        message: "Post created successfully",
-        statusCode: 201,
-      });
-    }
+    //   const friendList = await Friend.findOne({ user: id });
+
+    //   if (friendList && friendList.friends.length > 0) {
+    //     // Loop through the friends and send notifications
+    //     for (const friendId of friendList.friends) {
+    //       notification({
+    //         user: friendId,
+    //         type: "post",
+    //         content: `${senderName} added a post`,
+    //         sourceUser: id,
+    //         post: post._id,
+    //       });
+    //     }
+    //   }
+
+    //   res.status(201).json({
+    //     message: "Post created successfully",
+    //     statusCode: 201,
+    //   });
+    // }
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -321,8 +326,12 @@ const singlePost = async (req, res) => {
 
     // Assuming you also want to retrieve likesCount and likersNames
     const likesCount = post.likes.length;
-    const likers = await User.find({ _id: { $in: post.likes } }).select('firstname lastname');
-    const likersNames = likers.map(liker => `${liker.firstname} ${liker.lastname}`);
+    const likers = await User.find({ _id: { $in: post.likes } }).select(
+      "firstname lastname"
+    );
+    const likersNames = likers.map(
+      (liker) => `${liker.firstname} ${liker.lastname}`
+    );
 
     const postWithLikesInfo = {
       ...post.toObject(),
@@ -346,7 +355,73 @@ const singlePost = async (req, res) => {
   }
 };
 
+const loadFeed = async (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader.split(" ")[1];
 
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decodedToken.id;
+    const user = await User.findById(userId);
+    console.log(user);
+
+    if (!user) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        message: "User not found",
+      });
+    } else {
+      const id = user._id;
+      console.log(id);
+      const friendList = await Friend.findOne({ user: id });
+
+      if (!friendList) {
+        return res.status(200).json({
+          statusCode: 200,
+          status: true,
+          message: "Your feed is empty",
+          data: [],
+        });
+      } else {
+        const friends = friendList.friends;
+        const posts = await Post.find({ owner: { $in: friends } }).sort({
+          createdAt: -1,
+        });
+
+        const postsWithLikesInfo = await Promise.all(
+          posts.map(async (post) => {
+            const likesCount = post.likes.length;
+            const owner = await User.findById(post.owner).select(
+              "firstname lastname"
+            );
+            const ownerName = `${owner.firstname} ${owner.lastname}`;
+
+            return {
+              ...post.toObject(),
+              likesCount,
+              ownerName,
+            };
+          })
+        );
+
+        res.status(200).json({
+          statusCode: 200,
+          status: true,
+          message: "Feed retrieved successfully",
+          data: postsWithLikesInfo,
+        });
+      }
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      statusCode: 500,
+      status: false,
+      message: "Internal Server Error",
+    });
+  }
+};
 
 module.exports = {
   newPost,
@@ -355,5 +430,6 @@ module.exports = {
   unlikePost,
   deletePost,
   getUserPosts,
-  singlePost
+  singlePost,
+  loadFeed,
 };
