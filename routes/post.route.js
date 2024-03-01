@@ -5,7 +5,7 @@ const { newPost, editPost, likePost, unlikePost, getUserPosts, singlePost,  load
 const { verifyToken } = require("../middlewares/verifyPerson");
 const { validateFields } = require("../middlewares/validateFields");
 
-router.post("/new",verifyToken, validateFields(["content"]),  multer.single("media"), newPost);
+router.post("/new",verifyToken,   multer.single("media"), newPost);
 router.get("/feed", loadFeed);
 router.get("/me", verifyToken,  getUserPosts);
 router.put("/edit/:postId", verifyToken, validateFields(["content"]),  editPost);

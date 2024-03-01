@@ -8,6 +8,7 @@ const { notification } = require("./misc/notify.controller");
 const newPost = async (req, res) => {
   const authHeader = req.headers["authorization"];
   const { content } = req.body;
+  console.log(content)
   const { file } = req;
   const token = authHeader.split(" ")[1];
 
@@ -15,54 +16,52 @@ const newPost = async (req, res) => {
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decodedToken.id;
     const user = await User.findById(userId);
-    console.log(content)
-    console.log(file)
 
-    // if (!user) {
-    //   return res.status(404).json({
-    //     statusCode: 404,
-    //     status: false,
-    //     message: "User not found",
-    //   });
-    // } else {
-    //   const id = user._id;
-    //   const post = new Post({
-    //     owner: id,
-    //     content,
-    //   });
+    if (!user) {
+      return res.status(404).json({
+        statusCode: 404,
+        status: false,
+        message: "User not found",
+      });
+    } else {
+      const id = user._id;
+      const post = new Post({
+        owner: id,
+        content,
+      });
 
-    //   if (file) {
-    //     const { secure_url: url, public_id, error } = await cloudinary.uploader.upload(
-    //       file.path
-    //     );
-    //     post.media = { url, public_id };
-    //     console.log(error);
-    //   }
+      if (file) {
+        const { secure_url: url, public_id, error } = await cloudinary.uploader.upload(
+          file.path
+        );
+        post.media = { url, public_id };
+        console.log(error);
+      }
 
-    //   await post.save();
+      await post.save();
 
-    //   const senderName = `${user.firstname} ${user.lastname}`;
+      const senderName = `${user.firstname} ${user.lastname}`;
 
-    //   const friendList = await Friend.findOne({ user: id });
+      const friendList = await Friend.findOne({ user: id });
 
-    //   if (friendList && friendList.friends.length > 0) {
-    //     // Loop through the friends and send notifications
-    //     for (const friendId of friendList.friends) {
-    //       notification({
-    //         user: friendId,
-    //         type: "post",
-    //         content: `${senderName} added a post`,
-    //         sourceUser: id,
-    //         post: post._id,
-    //       });
-    //     }
-    //   }
+      if (friendList && friendList.friends.length > 0) {
+        // Loop through the friends and send notifications
+        for (const friendId of friendList.friends) {
+          notification({
+            user: friendId,
+            type: "post",
+            content: `${senderName} added a post`,
+            sourceUser: id,
+            post: post._id,
+          });
+        }
+      }
 
-    //   res.status(201).json({
-    //     message: "Post created successfully",
-    //     statusCode: 201,
-    //   });
-    // }
+      res.status(201).json({
+        message: "Post created successfully",
+        statusCode: 201,
+      });
+    }
   } catch (error) {
     console.log(error);
     res.status(500).json({
