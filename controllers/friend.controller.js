@@ -168,8 +168,7 @@ const declineFriend = async (req, res) => {
     // Update friend request status to "accepted"
     await FriendRequest.findByIdAndDelete(id);
 
-    const currentUser = await User.findById(userId);
-    const friendId = friendRequest.fromUser;
+
 
     res.status(200).json({
       statusCode: 200,

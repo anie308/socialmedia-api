@@ -5,7 +5,6 @@ const jwt = require("jsonwebtoken");
 const cloudinary = require("../../cloud");
 const { GetTransacEmailContent } = require("@getbrevo/brevo");
 
-// const { notification } = require("../misc/notify.controller");
 
 const postComment = async (req, res) => {
   const authHeader = req.headers["authorization"];
@@ -54,22 +53,6 @@ const postComment = async (req, res) => {
 
       await comment.save();
 
-      // const senderName = `${user.firstname} ${user.lastname}`;
-
-      // const friendList = await Friend.findOne({ user: id });
-
-      // if (friendList && friendList.friends.length > 0) {
-      //   // Loop through the friends and send notifications
-      //   for (const friendId of friendList.friends) {
-      //     notification({
-      //       user: friendId,
-      //       type: "comment",
-      //       content: `${senderName} commented on a post`,
-      //       sourceUser: id,
-      //       post: post._id,
-      //     });
-      //   }
-      // }
 
       res.status(201).json({
         message: "Comment added successfully",

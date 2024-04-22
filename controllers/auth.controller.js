@@ -126,18 +126,13 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    const receiver = [
-      {
-        email: email,
-      },
-    ];
+
     const code = Math.floor(100000 + Math.random() * 900000);
 
     const newCode = new Code({
       code,
     });
 
-    // const username = user.username;
     await newCode.save();
     res.status(200).json({
       statusCode: 200,
